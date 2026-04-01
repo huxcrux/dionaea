@@ -251,6 +251,7 @@ class LogJsonHandler(ihandler):
         data = {
             "timestamp": datetime.utcnow().isoformat(),
             "download": {
+                "file": self._prepare_value(icd.file),
                 "filename": os.path.basename(self._prepare_value(icd.file)),
                 "md5": self._prepare_value(icd.md5hash),
                 "url": self._prepare_value(icd.url)

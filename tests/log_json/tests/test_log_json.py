@@ -120,6 +120,7 @@ def test_download_complete_hash_emits_standalone_record():
     assert record["src_ip"] == "198.51.100.25"
     assert record["src_port"] == 4444
     assert record["download"] == {
+        "file": "/var/dionaea/binaries/44d88612fea8a8f36de82e1278abb02f",
         "filename": "44d88612fea8a8f36de82e1278abb02f",
         "md5": "44d88612fea8a8f36de82e1278abb02f",
         "url": "http://example.invalid/malware.exe",

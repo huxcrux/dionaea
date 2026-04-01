@@ -59,6 +59,7 @@ Format of standalone download-complete information:
             "transport": "<string:transport protocol e.g. tcp or udp>"
         },
         "download": {
+            "file": "<string:stored file path>",
             "filename": "<string:stored filename>",
             "md5": "<string:md5 hash>",
             "url": "<string:download url>"
@@ -72,7 +73,8 @@ Format of standalone download-complete information:
     }
 
 The handler emits this standalone record for each
-``dionaea.download.complete.hash`` incident.
+``dionaea.download.complete.hash`` incident and stores all file-related
+fields below ``download``.
 
 
 Example config
