@@ -6,5 +6,4 @@
 
 all:
 	cd mysql && make
-	cd log_json && make
 	cd printer && make

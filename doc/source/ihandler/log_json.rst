@@ -49,33 +49,6 @@ Format of the connection information:
         }
     }
 
-Format of standalone download-complete information:
-
-.. code-block:: JavaScript
-
-    {
-        "connection": {
-            "protocol": "<string:service name e.g. httpd>",
-            "transport": "<string:transport protocol e.g. tcp or udp>"
-        },
-        "download": {
-            "file": "<string:stored file path>",
-            "filename": "<string:stored filename>",
-            "md5": "<string:md5 hash>",
-            "url": "<string:download url>"
-        },
-        "dst_ip": "<string:local ip address>",
-        "dst_port": <integer:local port>,
-        "src_hostname": "<string:hostname of the remote host>",
-        "src_ip": "<string:remote ip address>",
-        "src_port": <integer:remote port>,
-        "timestamp": "<string:UTC timestamp>"
-    }
-
-The handler emits this standalone record for each
-``dionaea.download.complete.hash`` incident and stores all file-related
-fields below ``download``.
-
 
 Example config
 --------------
