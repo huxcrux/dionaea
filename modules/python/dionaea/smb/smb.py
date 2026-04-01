@@ -38,11 +38,22 @@ STATE_NTCREATE = 3
 STATE_NTWRITE = 4
 STATE_NTREAD = 5
 
+DCERPC_BIND_ACK_ACCEPTANCE = 0
+DCERPC_BIND_ACK_NEGOTIATE_ACK = 3
+DCERPC_TRANSFER_SYNTAX_NDR = '8a885d04-1ceb-11c9-9fe8-08002b104860'
+DCERPC_TRANSFER_SYNTAX_BIND_TIME_FEATURE_NEGOTIATION_PREFIX = '6cb71c2c-9812-4540'
+
 registered_services = {}
 
 def register_rpc_service(service):
     uuid = service.uuid
     registered_services[uuid] = service
+
+
+def _is_bind_time_feature_negotiation_syntax(transfersyntax_uuid):
+    return str(transfersyntax_uuid).startswith(
+        DCERPC_TRANSFER_SYNTAX_BIND_TIME_FEATURE_NEGOTIATION_PREFIX
+    )
 
 
 class smbd(connection):
@@ -758,25 +769,36 @@ class smbd(connection):
                 transfersyntax_uuid = UUID(bytes_le=tmp.TransferSyntax)
                 ctxitem.TransferSyntax = tmp.TransferSyntax #[:16]
                 ctxitem.TransferSyntaxVersion = tmp.TransferSyntaxVersion
-                if str(transfersyntax_uuid) == '8a885d04-1ceb-11c9-9fe8-08002b104860':
-                    if service_uuid.hex in registered_services:
-                        service = registered_services[service_uuid.hex]
+                if service_uuid.hex in registered_services:
+                    service = registered_services[service_uuid.hex]
+                    if str(transfersyntax_uuid) == DCERPC_TRANSFER_SYNTAX_NDR:
                         smblog.info("Found a registered UUID (%s). Accepting Bind for %s" %
                                     (service_uuid , service.__class__.__name__))
                         self.state['uuid'] = service_uuid.hex
                         # Copy Transfer Syntax to CtxItem
-                        ctxitem.AckResult = 0
+                        ctxitem.AckResult = DCERPC_BIND_ACK_ACCEPTANCE
                         ctxitem.AckReason = 0
+                    elif _is_bind_time_feature_negotiation_syntax(transfersyntax_uuid):
+                        smblog.info(
+                            "Found a registered UUID (%s). Acknowledging bind-time feature negotiation for %s",
+                            service_uuid,
+                            service.__class__.__name__
+                        )
+                        self.state['uuid'] = service_uuid.hex
+                        ctxitem.AckResult = DCERPC_BIND_ACK_NEGOTIATE_ACK
+                        ctxitem.AckReason = 0
+                        ctxitem.TransferSyntax = b"\x00" * 16
+                        ctxitem.TransferSyntaxVersion = 0
                     else:
                         smblog.warning(
-                            "Attempt to register %s failed, UUID does not exist or is not implemented",
-                            service_uuid
+                            "Attempt to register %s failed, TransferSyntax %s is unknown",
+                            service_uuid,
+                            transfersyntax_uuid
                         )
                 else:
                     smblog.warning(
-                        "Attempt to register %s failed, TransferSyntax %s is unknown",
-                        service_uuid,
-                        transfersyntax_uuid
+                        "Attempt to register %s failed, UUID does not exist or is not implemented",
+                        service_uuid
                     )
                 i = incident("dionaea.modules.python.smb.dcerpc.bind")
                 i.con = self
