@@ -66,7 +66,7 @@ file-related values are grouped below ``data.download``.
          "download": {
             "file": "<stored file path>",
             "filename": "<stored filename>",
-            "md5hash": "<md5 hash>",
+            "md5": "<md5 hash>",
             "url": "<download url>"
          }
       }

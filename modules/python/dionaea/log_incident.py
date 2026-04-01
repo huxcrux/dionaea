@@ -149,7 +149,10 @@ class LogJsonHandler(ihandler):
             for key in ("file", "filename", "md5hash", "url"):
                 value = idata.pop(key, None)
                 if value is not None:
-                    download[key] = value
+                    if key == "md5hash":
+                        download["md5"] = value
+                    else:
+                        download[key] = value
 
             if "filename" not in download and "file" in download:
                 download["filename"] = os.path.basename(download["file"])
