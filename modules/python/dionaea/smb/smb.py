@@ -42,6 +42,16 @@ DCERPC_BIND_ACK_ACCEPTANCE = 0
 DCERPC_BIND_ACK_NEGOTIATE_ACK = 3
 DCERPC_TRANSFER_SYNTAX_NDR = '8a885d04-1ceb-11c9-9fe8-08002b104860'
 DCERPC_TRANSFER_SYNTAX_BIND_TIME_FEATURE_NEGOTIATION_PREFIX = '6cb71c2c-9812-4540'
+SMB_NAMED_PIPE_NAMES = {
+    "atsvc",
+    "browser",
+    "epmapper",
+    "lsarpc",
+    "netlogon",
+    "samr",
+    "spoolss",
+    "srvsvc",
+}
 
 registered_services = {}
 
@@ -54,6 +64,17 @@ def _is_bind_time_feature_negotiation_syntax(transfersyntax_uuid):
     return str(transfersyntax_uuid).startswith(
         DCERPC_TRANSFER_SYNTAX_BIND_TIME_FEATURE_NEGOTIATION_PREFIX
     )
+
+
+def _normalize_smb_filename(filename):
+    for idx, char in enumerate(filename):
+        if char not in ("\\", "/"):
+            return filename[idx:]
+    return filename
+
+
+def _is_named_pipe_request(filename):
+    return _normalize_smb_filename(filename).lower() in SMB_NAMED_PIPE_NAMES
 
 
 class smbd(connection):
@@ -396,8 +417,20 @@ class smbd(connection):
             r.FID = 0x4000
             while r.FID in self.fids:
                 r.FID += 0x200
-            if h.FileAttributes & (SMB_FA_HIDDEN|SMB_FA_SYSTEM|SMB_FA_ARCHIVE|SMB_FA_NORMAL):
-                # if a normal file is requested, provide a file
+            # get pretty filename
+            f,v = h.getfield_and_val('Filename')
+            filename = f.i2repr(h,v)
+            filename = _normalize_smb_filename(filename)
+
+            is_directory_request = bool(
+                h.FileAttributes & SMB_FA_DIRECTORY or
+                h.CreateOptions & SMB_CREATOPT_DIRECTORY
+            )
+            is_named_pipe_request = _is_named_pipe_request(filename)
+
+            if not is_directory_request and not is_named_pipe_request:
+                # Treat non-directory creates on normal shares as file uploads.
+                # Some SMB clients send FileAttributes=0 for regular file puts.
 
                 dionaea_config = g_dionaea.config().get("dionaea")
                 download_dir = dionaea_config.get("download.dir")
@@ -409,21 +442,12 @@ class smbd(connection):
                     dir=download_dir
                 )
 
-                # get pretty filename
-                f,v = h.getfield_and_val('Filename')
-                filename = f.i2repr(h,v)
-                for j in range(len(filename)):
-                    if filename[j] != '\\' and filename[j] != '/':
-                        break
-                filename = filename[j:]
-
                 i = incident("dionaea.download.offer")
                 i.con = self
                 i.url = "smb://%s/%s" % (self.remote.host, filename)
                 i.report()
                 smblog.info("OPEN FILE! %s" % filename)
-
-            elif h.FileAttributes & SMB_FA_DIRECTORY:
+            elif is_directory_request:
                 pass
             else:
                 self.fids[r.FID] = None
