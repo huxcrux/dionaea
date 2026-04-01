@@ -4,6 +4,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import os
 from datetime import datetime
 import json
 import logging
@@ -180,6 +181,19 @@ class LogJsonHandler(ihandler):
         }
         self.attacks[con] = data
 
+    def _serialize_connection_data(self, con):
+        return {
+            "connection": {
+                "protocol": con.protocol,
+                "transport": con.transport
+            },
+            "dst_ip": con.local.host,
+            "dst_port": con.local.port,
+            "src_hostname": self._prepare_value(con.remote.hostname),
+            "src_ip": con.remote.host,
+            "src_port": con.remote.port
+        }
+
     def handle_incident_dionaea_connection_tcp_listen(self, icd):
         self._serialize_connection(icd, "listen")
         con = icd.con
@@ -232,6 +246,22 @@ class LogJsonHandler(ihandler):
             del self.attacks[con]
         else:
             logger.warn("no attack data for %s:%s" % (con.local.host, con.local.port))
+
+    def handle_incident_dionaea_download_complete_hash(self, icd):
+        data = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "download": {
+                "filename": os.path.basename(self._prepare_value(icd.file)),
+                "md5": self._prepare_value(icd.md5hash),
+                "url": self._prepare_value(icd.url)
+            }
+        }
+
+        if hasattr(icd, "con"):
+            data.update(self._serialize_connection_data(icd.con))
+
+        for handler in self.handlers:
+            handler.submit(data)
 
     def handle_incident_dionaea_modules_python_ftp_command(self, icd):
         con = icd.con
