@@ -43,6 +43,35 @@ Format
       }
    }
 
+For download incidents such as ``dionaea.download.complete.hash`` the
+file-related values are grouped below ``data.download``.
+
+.. code-block:: JavaScript
+
+   {
+      "name": "dionaea",
+      "origin": "dionaea.download.complete.hash",
+      "timestamp": "<date in ISO 8601>",
+      "data": {
+         "connection": {
+            "id": "<internal ID>",
+            "local_ip": "<local IP>",
+            "local_port": <local port>,
+            "remote_ip": "<remote IP>",
+            "remote_hostname": "<remote hostname if resolvable>",
+            "remote_port": <remote port>,
+            "protocol": "<protocol>",
+            "transport": "<transport tcp|udp>"
+         },
+         "download": {
+            "file": "<stored file path>",
+            "filename": "<stored filename>",
+            "md5hash": "<md5 hash>",
+            "url": "<download url>"
+         }
+      }
+   }
+
 Example config
 --------------
 

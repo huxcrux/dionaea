@@ -8,6 +8,7 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+import os
 from urllib.parse import urlparse
 
 from dionaea import IHandlerLoader
@@ -142,6 +143,19 @@ class LogJsonHandler(ihandler):
                 idata[k] = tmp_data
             else:
                 logger.warning("Incident '%s' with unknown data type '%s' for key '%s'", icd.origin, type(v), k)
+
+        if icd.origin.startswith("dionaea.download."):
+            download = {}
+            for key in ("file", "filename", "md5hash", "url"):
+                value = idata.pop(key, None)
+                if value is not None:
+                    download[key] = value
+
+            if "filename" not in download and "file" in download:
+                download["filename"] = os.path.basename(download["file"])
+
+            if len(download) > 0:
+                idata["download"] = download
 
         data = {
             "timestamp": datetime.utcnow().isoformat(),
